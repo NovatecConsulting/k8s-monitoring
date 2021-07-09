@@ -228,3 +228,55 @@ function getOneSeries(
   series.push(ser);
   return series;
 }
+
+export function withAppMetric(
+  width: number,
+  data: PanelData,
+  timeRange: TimeRange,
+  name: string,
+  level: string,
+) {
+  const applicationMetrics = [
+    'Service in count',
+    'Service out count',
+    'Service in responsetime sum',
+    'Service out responsetime sum',
+    'http in responsetime sum',
+    'http out responsetime sum',
+    'jvm memory heap',
+    'jvm memory non heap',
+  ];
+  let withApp = false;
+  for (let i = 0; i < applicationMetrics.length; i++) {
+    if ((getApplicationSeries(width, data, timeRange, name, level, applicationMetrics[i]) !== undefined) === true) {
+      withApp = true;
+    };
+  }
+  return withApp;
+}
+export function withInfMetric(
+  width: number,
+  data: PanelData,
+  timeRange: TimeRange,
+  name: string,
+  level: string
+) {
+  const infrastructureMetrics = [
+    'CPU Usage',
+    'Memory Usage',
+    'Memory Saturation',
+    'Network receive total',
+    'Network transmit total',
+    'Network receive saturation',
+    'Network transmit saturation',
+    'Network receive errors',
+    'Network transmit errors'
+  ];
+  let withInf = false;
+  for (let i = 0; i < infrastructureMetrics.length; i++) {
+    if ((getInfrastructureSeries(width, data, timeRange, name, level, infrastructureMetrics[i]) !== undefined) === true) {
+      withInf = true;
+    };
+  }
+  return withInf;
+}
