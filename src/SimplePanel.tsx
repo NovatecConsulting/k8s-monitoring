@@ -31,7 +31,7 @@ export const SimplePanel: React.FC<Props> = ({ options, data, width, height, tim
   const [filterOption, setFilterOption] = useState(firstFilterOption);
   const [groupedOption, setGroupedOption] = useState('-');
   const [metricOption, setMetricOption] = useState('-');
-  const [showElements, setShowElements] = useState(handler(width, height, 'Overview', data));
+  const [showElements, setShowElements] = useState(handler(width, height, 'Overview', data, timeRange));
   const [showDrilldown, setShowDrilldown] = useState(false);
   const [drilldownItem, setDrilldownItem] = useState({
     position: { x: 0, y: 0 },
@@ -104,15 +104,15 @@ export const SimplePanel: React.FC<Props> = ({ options, data, width, height, tim
    * Calls the matching handlers.
    */
   const callHandlers = (level: string, filter: SelectableValue, grouped: string) => {
-    let allElements: Tuple = handler(width, height, level, data);
+    let allElements: Tuple = handler(width, height, level, data, timeRange);
     setShowElements(allElements);
     if (filter.label !== '-') {
       setShowElements(filterHandler(width, height, allElements, level, filter, data));
     }
     if (grouped !== '-' && filter.label === '-') {
-      setShowElements(groupedHandler(data, showElements, level, filter, grouped, width, height, false));
+      setShowElements(groupedHandler(data, showElements, level, filter, grouped, width, height, false, timeRange));
     } else if (grouped !== '-') {
-      setShowElements(groupedWithFilterHandler(showElements, level, filter, grouped, data, width, height));
+      setShowElements(groupedWithFilterHandler(showElements, level, filter, grouped, data, width, height, timeRange));
     }
   };
 
