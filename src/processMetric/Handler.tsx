@@ -130,14 +130,29 @@ export function filterHandler(
 ) {
   let filterElement: Element[] = [];
   const allElements = allInfo.inside;
+  if (filterOption.label === "Application metrics") {
+    for (let i = 0; i < allElements.length; i++) {
+      if (allElements[i].elementInfo.withAppMetrics) {
+        filterElement.push(allElements[i]);
+      }
+    }
+  }
+  else if (filterOption.label === "Infrastructure metrics") {
+    for (let i = 0; i < allElements.length; i++) {
+      if (allElements[i].elementInfo.withInfMetrics) {
+        filterElement.push(allElements[i]);
+      }
+    }
+  }
   // focus one
-  if (levelOption === filterOption.description) {
+  else if (levelOption === filterOption.description) {
     for (let i = 0; i < allElements.length; i++) {
       if (allElements[i].text === filterOption.label) {
         filterElement.push(allElements[i]);
       }
     }
-  } else {
+  }
+  else {
     let filterInfo = filterDiffLevel(data, levelOption, filterOption);
     filterElement = position(width, height, filterInfo.length);
 
@@ -212,7 +227,7 @@ export function groupedWithFilterHandler(
   timeRange: TimeRange,
 ) {
   if (hasHigherLevel(filterOption, groupedOption)) {
-    return groupedHandler(data, showInfo, levelOption, filterOption, groupedOption, width, height, true,timeRange);
+    return groupedHandler(data, showInfo, levelOption, filterOption, groupedOption, width, height, true, timeRange);
   } else {
     let allElementInfo = getAllContainer(data);
     let outside = '';
@@ -333,7 +348,7 @@ export function groupedHandler(
   filter: boolean,
   timeRange: TimeRange
 ) {
-  showElements = handler(width, height, levelOption, data,timeRange);
+  showElements = handler(width, height, levelOption, data, timeRange);
   if (levelOption === 'Node') {
     return nodeGrouped(data, groupedOption, width, height, timeRange);
   }
