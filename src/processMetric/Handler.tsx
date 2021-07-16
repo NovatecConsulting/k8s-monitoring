@@ -1,10 +1,11 @@
-import { PanelData, SelectableValue } from '@grafana/data';
+import { PanelData, SelectableValue, TimeRange } from '@grafana/data';
 import { positionOnlyGrupped, position, getOverview, positionOutside } from '../ObjectVisualisation/Calculation';
 import { getAllElementInfo, getAllContainer, getDeploymentCount } from './ConvertData';
 import { Element, Namespace, Tuple, Types } from 'types';
+import { withAppMetric, withInfMetric } from './ConvertGraphData';
 
 // Returns the elements considering the level.
-export function handler(width: number, height: number, levelOption: string, data: PanelData) {
+export function handler(width: number, height: number, levelOption: string, data: PanelData, timeRange: TimeRange) {
   let allElements: Element[] = [];
   const allElementInfo = getAllElementInfo(data);
   const namespaceCount = allElementInfo.length;
@@ -29,7 +30,8 @@ export function handler(width: number, height: number, levelOption: string, data
       allElements[i].elementInfo.pod = 'Count: ' + allElementInfo[i].Pod.length;
       allElements[i].elementInfo.type = Types.Namespace;
       allElements[i].elementInfo.deployment = 'Count: ' + allElementInfo[i].Deployment.length;
-
+      allElements[i].elementInfo.withAppMetrics = withAppMetric(width, data, timeRange, allElementInfo[i].Name, levelOption);
+      allElements[i].elementInfo.withInfMetrics = withInfMetric(width, data, timeRange, allElementInfo[i].Name, levelOption);
       let podcount = 0;
       let diffNodes = new Set();
       for (let l = 0; l < allElementInfo[i].Pod.length; l++) {
@@ -51,6 +53,8 @@ export function handler(width: number, height: number, levelOption: string, data
         allElements[temp].elementInfo.type = Types.Deployment;
         allElements[temp].elementInfo.deployment = allElementInfo[i].Deployment[l].Name;
         allElements[temp].elementInfo.container = 'Count: ' + allElementInfo[i].Deployment[l].Container.length;
+        allElements[temp].elementInfo.withAppMetrics = withAppMetric(width, data, timeRange, allElementInfo[i].Deployment[l].Name, levelOption);
+        allElements[temp].elementInfo.withInfMetrics = withInfMetric(width, data, timeRange, allElementInfo[i].Deployment[l].Name, levelOption);
         let diffNodes = new Set();
         for (let j = 0; j < allElementInfo[i].Deployment[l].Pod.length; j++) {
           diffNodes.add(allElementInfo[i].Deployment[l].Pod[j].Node);
@@ -73,6 +77,8 @@ export function handler(width: number, height: number, levelOption: string, data
         allElements[temp].elementInfo.type = Types.Pod;
         allElements[temp].elementInfo.deployment = allElementInfo[i].Pod[l].Deployment;
         allElements[temp].elementInfo.node = allElementInfo[i].Pod[l].Node;
+        allElements[temp].elementInfo.withAppMetrics = withAppMetric(width, data, timeRange, allElementInfo[i].Pod[l].Name, levelOption);
+        allElements[temp].elementInfo.withInfMetrics = withInfMetric(width, data, timeRange, allElementInfo[i].Pod[l].Name, levelOption);
         temp += 1;
       }
     }
@@ -91,6 +97,8 @@ export function handler(width: number, height: number, levelOption: string, data
           allElements[temp].elementInfo.type = Types.Container;
           allElements[temp].elementInfo.deployment = allElementInfo[i].Pod[l].Deployment;
           allElements[temp].elementInfo.node = allElementInfo[i].Pod[l].Node;
+          allElements[temp].elementInfo.withAppMetrics = withAppMetric(width, data, timeRange, allElementInfo[i].Pod[l].Container[j].Name, levelOption);
+          allElements[temp].elementInfo.withInfMetrics = withInfMetric(width, data, timeRange, allElementInfo[i].Pod[l].Container[j].Name, levelOption);
           temp += 1;
         }
       }
@@ -122,14 +130,29 @@ export function filterHandler(
 ) {
   let filterElement: Element[] = [];
   const allElements = allInfo.inside;
+  if (filterOption.label === "Application metrics") {
+    for (let i = 0; i < allElements.length; i++) {
+      if (allElements[i].elementInfo.withAppMetrics) {
+        filterElement.push(allElements[i]);
+      }
+    }
+  }
+  else if (filterOption.label === "Infrastructure metrics") {
+    for (let i = 0; i < allElements.length; i++) {
+      if (allElements[i].elementInfo.withInfMetrics) {
+        filterElement.push(allElements[i]);
+      }
+    }
+  }
   // focus one
-  if (levelOption === filterOption.description) {
+  else if (levelOption === filterOption.description) {
     for (let i = 0; i < allElements.length; i++) {
       if (allElements[i].text === filterOption.label) {
         filterElement.push(allElements[i]);
       }
     }
-  } else {
+  }
+  else {
     let filterInfo = filterDiffLevel(data, levelOption, filterOption);
     filterElement = position(width, height, filterInfo.length);
 
@@ -200,10 +223,11 @@ export function groupedWithFilterHandler(
   groupedOption: string,
   data: PanelData,
   width: number,
-  height: number
+  height: number,
+  timeRange: TimeRange,
 ) {
   if (hasHigherLevel(filterOption, groupedOption)) {
-    return groupedHandler(data, showInfo, levelOption, filterOption, groupedOption, width, height, true);
+    return groupedHandler(data, showInfo, levelOption, filterOption, groupedOption, width, height, true, timeRange);
   } else {
     let allElementInfo = getAllContainer(data);
     let outside = '';
@@ -321,11 +345,12 @@ export function groupedHandler(
   groupedOption: string,
   width: number,
   height: number,
-  filter: boolean
+  filter: boolean,
+  timeRange: TimeRange
 ) {
-  showElements = handler(width, height, levelOption, data);
+  showElements = handler(width, height, levelOption, data, timeRange);
   if (levelOption === 'Node') {
-    return nodeGrouped(data, groupedOption, width, height);
+    return nodeGrouped(data, groupedOption, width, height, timeRange);
   }
 
   if (filterOption.label !== '-') {
@@ -431,7 +456,7 @@ export function groupedHandler(
   return tupleInfo;
 }
 
-function nodeGrouped(data: PanelData, groupedOption: string, width: number, height: number) {
+function nodeGrouped(data: PanelData, groupedOption: string, width: number, height: number, timeRange: TimeRange) {
   const allElements = getAllElementInfo(data);
   let tuple = [];
 
@@ -498,7 +523,7 @@ function nodeGrouped(data: PanelData, groupedOption: string, width: number, heig
   }
 
   let tupleInfo = positionOnlyGrupped(tuple, width, height);
-  const showElements = handler(width, height, groupedOption, data);
+  const showElements = handler(width, height, groupedOption, data, timeRange);
 
   for (let i = 0; i < tupleInfo.inside.length; i++) {
     for (let l = 0; l < showElements.inside.length; l++) {

@@ -28,6 +28,8 @@ export interface ElementInfo {
   container?: string;
   node?: string;
   deployment?: string;
+  withAppMetrics?: boolean;
+  withInfMetrics?: boolean;
 }
 
 export enum Types {
